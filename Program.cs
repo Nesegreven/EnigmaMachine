@@ -216,17 +216,96 @@ namespace EnigmaMachine
             enigma.SetRotors(rotorTypes, new string(rotorPositions));
         }
 
+        static bool ValidatePlugboardInput(string input, out string errorMessage)
+        {
+            errorMessage = string.Empty;
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return true; // Empty input is valid (no plugboard connections)
+            }
+
+            // Convert to uppercase and split by spaces
+            var connections = input.ToUpper().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            var usedLetters = new HashSet<char>();
+
+            foreach (var pair in connections)
+            {
+                if (pair.Length != 2)
+                {
+                    errorMessage = $"Invalid pair '{pair}'. Each connection must be exactly two letters (e.g., 'AB').";
+                    return false;
+                }
+
+                char char1 = pair[0];
+                char char2 = pair[1];
+
+                if (!char.IsLetter(char1) || !char.IsLetter(char2))
+                {
+                    errorMessage = $"Invalid characters in pair '{pair}'. Only letters A-Z are allowed.";
+                    return false;
+                }
+
+                if (char1 == char2)
+                {
+                    errorMessage = $"Invalid pair '{pair}'. A letter cannot be connected to itself.";
+                    return false;
+                }
+
+                if (usedLetters.Contains(char1))
+                {
+                    errorMessage = $"Letter '{char1}' is used multiple times in plugboard connections.";
+                    return false;
+                }
+                if (usedLetters.Contains(char2))
+                {
+                    errorMessage = $"Letter '{char2}' is used multiple times in plugboard connections.";
+                    return false;
+                }
+
+                usedLetters.Add(char1);
+                usedLetters.Add(char2);
+            }
+
+            return true;
+        }
+
         static void SetPlugboard(Enigma enigma)
         {
-            Console.Clear();
-            Console.WriteLine("Set Plugboard Connections");
-            Console.WriteLine("------------------------");
-            Console.WriteLine("Enter pairs of letters, space separated (e.g. AB CD EF)");
-            Console.Write("> ");
+            bool validInput = false;
+            string input = string.Empty;
+            string validationError = string.Empty;
 
-            string input = Console.ReadLine().ToUpper();
+            while (!validInput)
+            {
+                Console.Clear();
+                Console.WriteLine("Set Plugboard Connections");
+                Console.WriteLine("------------------------");
+                Console.WriteLine("Enter pairs of letters, space separated (e.g. AB CD EF)");
+                Console.WriteLine("Leave blank for no connections.");
 
-            // Apply new settings
+                if (!string.IsNullOrEmpty(validationError))
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("\nInput Error:");
+                    Console.WriteLine(validationError);
+                    Console.ForegroundColor = ConsoleColor.White;
+                }
+
+                Console.Write("> ");
+                input = Console.ReadLine().ToUpper();
+
+                if (ValidatePlugboardInput(input, out validationError))
+                {
+                    validInput = true;
+                }
+                else
+                {
+                    // If input is invalid, the loop will continue, and the error will be displayed
+                    // No need for Console.ReadKey here, as the prompt will reappear.
+                }
+            }
+
+            // Apply new settings only if input is valid
             enigma.SetPlugboard(input);
         }
 
