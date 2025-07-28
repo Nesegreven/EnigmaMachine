@@ -1,0 +1,50 @@
+# .github/workflows/dotnet.yml
+
+name: .NET Build & Publish
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checks out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Sets up the specified version of the .NET SDK
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x # Use the .NET version your project targets
+
+      # 3. Restores the NuGet packages required for the project
+      - name: Restore dependencies
+        run: dotnet restore
+
+      # 4. Builds the project in Release configuration
+      - name: Build project
+        run: dotnet build --configuration Release --no-restore
+
+      # 5. Publishes the application for deployment
+      - name: Publish project
+        run: dotnet publish --configuration Release --output ./publish --no-build
+
+      # 6. Uploads the published output as a build artifact
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: enigma-simulator-app
+          path: ./publish
+
