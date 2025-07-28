@@ -245,21 +245,36 @@ namespace EnigmaMachine
                 bool validInput = false;
                 while (!validInput)
                 {
-                    Console.Write($"Ring {positions[i]} Setting (A-Z): ");
-                    var input = Console.ReadKey().KeyChar;
-                    Console.WriteLine();
+                    Console.Write($"Ring {positions[i]} Setting (A-Z or 1-26): ");
+                    string input = Console.ReadLine().Trim().ToUpper();
 
-                    if (char.IsLetter(input))
+                    // Numeric input
+                    if (int.TryParse(input, out int num))
                     {
-                        ringSettings[i] = char.ToUpper(input);
+                        if (num >= 1 && num <= 26)
+                        {
+                            ringSettings[i] = (char)('A' + (num - 1));
+                            validInput = true;
+                        }
+                        else
+                        {
+                            Console.WriteLine("Please enter a valid number (1-26) or letter (A-Z).");
+                        }
+                    }
+                    // Single letter input
+                    else if (input.Length == 1 && input[0] >= 'A' && input[0] <= 'Z')
+                    {
+                        ringSettings[i] = input[0];
                         validInput = true;
                     }
                     else
                     {
-                        Console.WriteLine("Please enter a letter A-Z.");
+                        Console.WriteLine("Please enter a valid number (1-26) or letter (A-Z).");
                     }
                 }
             }
+
+
 
             // Apply new settings
             enigma.SetRingSettings(new string(ringSettings));
