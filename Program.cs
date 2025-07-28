@@ -66,6 +66,25 @@ namespace EnigmaMachine
                         DrawInterface(enigma);
                         break;
 
+                    case ConsoleKey.F6:
+                        enigma.SaveCurrentAsDefault();
+                        Console.Clear();
+                        Console.WriteLine("Current configuration saved as default!");
+                        Console.WriteLine("Press any key to continue...");
+                        Console.ReadKey(true);
+                        DrawInterface(enigma);
+                        break;
+
+                    case ConsoleKey.F7:
+                        enigma.ResetToInitial();
+                        DrawInterface(enigma);
+                        break;
+
+                    case ConsoleKey.F8:
+                        enigma.ClearText();
+                        DrawInterface(enigma);
+                        break;
+
                     default:
                         // Only process alphabetic characters
                         if (char.IsLetter(key.KeyChar))
@@ -92,9 +111,12 @@ namespace EnigmaMachine
             Console.WriteLine("Enigma Machine\n");
 
             // Commands
-            Console.WriteLine("Commands: [ESC] Exit | [F1] Reset | [F2] Set Rotors | [F3] Set Plugboard | [F4] Set Rings | [F5] Set Reflector | Type to encrypt\n");
+            Console.WriteLine("Commands:");
+            Console.WriteLine("[ESC] Exit | [F1] Reset to Default | [F2] Set Rotors | [F3] Set Plugboard");
+            Console.WriteLine("[F4] Set Rings | [F5] Set Reflector | [F6] Save as Default | [F7] Reset to Initial");
+            Console.WriteLine("[F8] Clear Text | Type to encrypt\n");
 
-            // Rotor display
+            // Configuration display
             Console.Write("Rotor Types: ");
             for (int i = 0; i < state.RotorTypes.Length; i++)
             {
@@ -127,6 +149,9 @@ namespace EnigmaMachine
                 .Where(kvp => kvp.Key < kvp.Value)
                 .Select(kvp => $"{kvp.Key}{kvp.Value}");
             Console.WriteLine(string.Join(" ", plugboardPairs));
+
+            // Configuration status
+            Console.WriteLine($"Configuration: {(state.IsDefault ? "Default" : "Custom")} | Initial Positions: {state.InitialPositions}");
 
             // Text display areas
             Console.WriteLine($"\nPlaintext: {state.Plaintext}");
@@ -269,13 +294,44 @@ namespace EnigmaMachine
     }
 
     /// <summary>
-    /// Enigma machine implementation with historical accuracy
+    /// Configuration structure to hold Enigma settings
+    /// Encapsulates all machine parameters for easy state management
+    /// </summary>
+    public struct EnigmaConfiguration
+    {
+        public string[] RotorTypes;      // Which physical rotors are installed (I-V)
+        public string ReflectorType;     // Which reflector is used (UKW-B or UKW-C)
+        public char[] RingSettings;      // Ring settings (Ringstellung) - internal wiring offset
+        public char[] RingPositions;     // Current rotor positions visible in windows
+        public string PlugboardPairs;   // Plugboard cable connections as string pairs
+
+        public EnigmaConfiguration(string[] rotorTypes, string reflectorType,
+            char[] ringSettings, char[] ringPositions, string plugboardPairs)
+        {
+            RotorTypes = (string[])rotorTypes?.Clone() ?? new[] { "I", "II", "III" };
+            ReflectorType = reflectorType ?? "UKW-B";
+            RingSettings = (char[])ringSettings?.Clone() ?? new[] { 'A', 'A', 'A' };
+            RingPositions = (char[])ringPositions?.Clone() ?? new[] { 'A', 'A', 'A' };
+            PlugboardPairs = plugboardPairs ?? "";
+        }
+
+        public EnigmaConfiguration Clone()
+        {
+            return new EnigmaConfiguration(
+                (string[])RotorTypes.Clone(),
+                ReflectorType,
+                (char[])RingSettings.Clone(),
+                (char[])RingPositions.Clone(),
+                PlugboardPairs
+            );
+        }
+    }
+
+    /// <summary>
+    /// Enigma machine implementation with improved state management
     /// </summary>
     class Enigma
     {
-        // Constants,  I cant remeber what i used this for probably should be removed
-        private const string ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
         // Rotor wirings (historical Enigma rotors I-V)
         private readonly Dictionary<string, string> rotorWirings = new Dictionary<string, string>
         {
@@ -299,41 +355,51 @@ namespace EnigmaMachine
         // Reflector wirings
         private readonly Dictionary<string, Dictionary<char, char>> reflectorWirings = new Dictionary<string, Dictionary<char, char>>();
 
-        // Configuration
+        // Configuration management
+        private EnigmaConfiguration initialConfiguration;  // Configuration at startup
+        private EnigmaConfiguration defaultConfiguration;  // User-defined default
+        private EnigmaConfiguration currentConfiguration;  // Current active config
+
+        // Current state
         private string[] rotorTypes; // Which rotors are used (I-V)
         private string reflectorType; // Which reflector (UKW-B or UKW-C)
         private char[] ringSettings; // Ring settings for each rotor
         private char[] ringPositions; // Current position of each rotor
-
-        // Plugboard connections
-        private Dictionary<char, char> plugboard;
+        private Dictionary<char, char> plugboard; // Plugboard connections
 
         // For tracking input/output
-        private StringBuilder plaintext;
-        private StringBuilder ciphertext;
+        private StringBuilder plaintext;  // Accumulates original input text
+        private StringBuilder ciphertext; // Accumulates encrypted output text
 
-        public Enigma(string[] rotors = null, string reflector = "UKW-B", string ringSetting = "AAA", string ringPosition = "AAA", string plugboardPairs = "")
+        public Enigma(string[] rotors = null, string reflector = "UKW-B",
+            string ringSetting = "AAA", string ringPosition = "AAA", string plugboardPairs = "")
         {
             // Set up reflector wirings
             SetupReflectors();
 
-            // Initialize configuration
-            rotorTypes = rotors?.ToArray() ?? new[] { "I", "II", "III" };
-            reflectorType = reflector;
-            ringSettings = ringSetting.ToCharArray();
-            ringPositions = ringPosition.ToCharArray();
+            // Initialize configurations
+            initialConfiguration = new EnigmaConfiguration(
+                rotors ?? new[] { "I", "II", "III" },
+                reflector,
+                ringSetting.ToCharArray(),
+                ringPosition.ToCharArray(),
+                plugboardPairs
+            );
+
+            // Default starts as initial
+            defaultConfiguration = initialConfiguration.Clone();
+
+            // Apply initial configuration
+            ApplyConfiguration(initialConfiguration);
 
             plaintext = new StringBuilder();
             ciphertext = new StringBuilder();
-
-            // Set up plugboard
-            plugboard = new Dictionary<char, char>();
-            SetPlugboard(plugboardPairs);
         }
 
         private void SetupReflectors()
         {
-            // Set up UKW-B reflector (historical)
+            // Set up UKW-B reflector (historical Enigma reflector wiring)
+            // The reflector connects pairs of contacts, creating a symmetric substitution
             var reflectorB = new Dictionary<char, char>();
             var reflectorBPairs = new[] {
                 "AY", "BR", "CU", "DH", "EQ", "FS", "GL", "IP", "JX", "KN", "MO", "TZ", "VW"
@@ -341,11 +407,12 @@ namespace EnigmaMachine
 
             foreach (var pair in reflectorBPairs)
             {
+                // Reflector connections are bidirectional (A->Y and Y->A)
                 reflectorB[pair[0]] = pair[1];
                 reflectorB[pair[1]] = pair[0];
             }
 
-            // Set up UKW-C reflector (historical)
+            // Set up UKW-C reflector (alternative historical reflector)
             var reflectorC = new Dictionary<char, char>();
             var reflectorCPairs = new[] {
                 "AF", "BV", "CP", "DJ", "EI", "GO", "HY", "KR", "LZ", "MX", "NW", "QT", "SU"
@@ -361,7 +428,66 @@ namespace EnigmaMachine
             reflectorWirings["UKW-C"] = reflectorC;
         }
 
+        private void ApplyConfiguration(EnigmaConfiguration config)
+        {
+            rotorTypes = (string[])config.RotorTypes.Clone();
+            reflectorType = config.ReflectorType;
+            ringSettings = (char[])config.RingSettings.Clone();
+            ringPositions = (char[])config.RingPositions.Clone();
+
+            // Set up plugboard
+            plugboard = new Dictionary<char, char>();
+            SetupPlugboard(config.PlugboardPairs);
+
+            // Update current configuration
+            currentConfiguration = config.Clone();
+        }
+
+        private void SetupPlugboard(string pairs)
+        {
+            plugboard.Clear();
+
+            // Parse plugboard settings - format: "AB CD EF" (space-separated pairs)
+            // Each pair represents a physical cable connecting two letters on the plugboard
+            var connections = pairs.ToUpper().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var pair in connections)
+            {
+                // Validate: exactly 2 letters, both unused in other connections
+                if (pair.Length == 2 &&
+                    char.IsLetter(pair[0]) &&
+                    char.IsLetter(pair[1]) &&
+                    !plugboard.ContainsKey(pair[0]) &&
+                    !plugboard.ContainsKey(pair[1]))
+                {
+                    // Plugboard connections are bidirectional (A<->B means A->B and B->A)
+                    plugboard[pair[0]] = pair[1];
+                    plugboard[pair[1]] = pair[0];
+                }
+            }
+        }
+
+        private void UpdateCurrentConfiguration()
+        {
+            currentConfiguration = new EnigmaConfiguration(
+                rotorTypes,
+                reflectorType,
+                ringSettings,
+                ringPositions,
+                GetPlugboardPairs()
+            );
+        }
+
+        private string GetPlugboardPairs()
+        {
+            var pairs = plugboard
+                .Where(kvp => kvp.Key < kvp.Value)
+                .Select(kvp => $"{kvp.Key}{kvp.Value}");
+            return string.Join(" ", pairs);
+        }
+
         // Apply Caesar shift to a string (used for ring settings)
+        // This simulates the physical offset of rotor wiring relative to the rotor body
         private string CaesarShift(string input, int shift)
         {
             if (shift == 0) return input;
@@ -372,6 +498,7 @@ namespace EnigmaMachine
             {
                 if (char.IsLetter(c))
                 {
+                    // Shift each letter by the specified amount, wrapping around the alphabet
                     int code = c - 'A';
                     code = (code + shift) % 26;
                     result.Append((char)(code + 'A'));
@@ -386,22 +513,25 @@ namespace EnigmaMachine
         }
 
         // Rotate rotors according to Enigma mechanics
+        // This implements the complex "double-stepping" mechanism of the historical Enigma
         private void RotateRotors()
         {
             // Check for notch positions to implement double stepping
+            // The notch determines when a rotor causes the next rotor to step
             bool rotorANotch = ringPositions[0] == rotorNotches[rotorTypes[0]];
             bool rotorBNotch = ringPositions[1] == rotorNotches[rotorTypes[1]];
             bool rotorCNotch = ringPositions[2] == rotorNotches[rotorTypes[2]];
 
             // Step the middle rotor if either:
-            // 1. Right rotor (C) is at its notch position
-            // 2. Middle rotor (B) is at its notch position (double-stepping)
+            // 1. Right rotor (C) is at its notch position (normal stepping)
+            // 2. Middle rotor (B) is at its notch position (double-stepping anomaly)
+            // The double-stepping occurs because the middle rotor steps again when it's at its notch
             bool stepMiddle = rotorCNotch || rotorBNotch;
 
             // Step the left rotor (A) if the middle rotor (B) is at its notch position
             bool stepLeft = rotorBNotch;
 
-            // Always step the right rotor (C)
+            // Always step the right rotor (C) - this happens before every encryption
             ringPositions[2] = (char)(((ringPositions[2] - 'A' + 1) % 26) + 'A');
 
             // Step the middle rotor (B) if triggered
@@ -418,6 +548,7 @@ namespace EnigmaMachine
         }
 
         // Process a single character through the Enigma machine
+        // This implements the complete signal path: plugboard -> rotors -> reflector -> rotors -> plugboard
         private char ProcessChar(char input)
         {
             if (!char.IsLetter(input))
@@ -425,19 +556,21 @@ namespace EnigmaMachine
                 return input;
             }
 
-            // Convert to uppercase
+            // Convert to uppercase - Enigma only processed uppercase letters
             char c = char.ToUpper(input);
 
-            // Apply plugboard
+            // Apply plugboard transformation (if any connections exist)
+            // The plugboard swaps pairs of letters before and after rotor processing
             if (plugboard.TryGetValue(c, out char plugboardOutput))
             {
                 c = plugboardOutput;
             }
 
-            // Step the rotors
+            // Step the rotors BEFORE processing the character (historical accuracy)
             RotateRotors();
 
             // Get effective rotor wirings considering ring settings
+            // Ring settings offset the internal wiring relative to the visible rotor position
             string[] effectiveRotors = new string[3];
             for (int i = 0; i < 3; i++)
             {
@@ -446,7 +579,8 @@ namespace EnigmaMachine
 
                 if (ringSetting > 0)
                 {
-                    // Apply Caesar shift, then rotate the string
+                    // Apply Caesar shift to the wiring, then rotate the string
+                    // This simulates the physical offset of the wiring inside the rotor
                     string shiftedRotor = CaesarShift(rotorWirings[rotorTypes[i]], ringSetting);
                     effectiveRotors[i] = shiftedRotor.Substring(26 - ringSetting) + shiftedRotor.Substring(0, 26 - ringSetting);
                 }
@@ -457,34 +591,36 @@ namespace EnigmaMachine
             }
 
             // Get current offsets from rotor positions
+            // These represent how far each rotor has turned from position 'A'
             int offsetA = ringPositions[0] - 'A';
             int offsetB = ringPositions[1] - 'A';
             int offsetC = ringPositions[2] - 'A';
 
-            // Convert letter to number (A=0, B=1, etc.)
+            // Convert letter to number (A=0, B=1, etc.) for mathematical operations
             int pos = c - 'A';
 
-            // Right to left through the rotors (C -> B -> A)
+            // === FORWARD PATH: Right to left through the rotors (C -> B -> A) ===
 
-            // Through rotor C (right)
-            int shifted = (pos + offsetC) % 26;
-            char let = effectiveRotors[2][shifted];
-            pos = let - 'A';
-            pos = (pos - offsetC + 26) % 26;
+            // Through rotor C (rightmost/fastest rotor)
+            int shifted = (pos + offsetC) % 26;  // Apply rotor position offset
+            char let = effectiveRotors[2][shifted];  // Get the substituted letter
+            pos = let - 'A';  // Convert back to number
+            pos = (pos - offsetC + 26) % 26;  // Remove the offset
 
-            // Through rotor B (middle)
+            // Through rotor B (middle rotor)
             shifted = (pos + offsetB) % 26;
             let = effectiveRotors[1][shifted];
             pos = let - 'A';
             pos = (pos - offsetB + 26) % 26;
 
-            // Through rotor A (left)
+            // Through rotor A (leftmost/slowest rotor)
             shifted = (pos + offsetA) % 26;
             let = effectiveRotors[0][shifted];
             pos = let - 'A';
             pos = (pos - offsetA + 26) % 26;
 
-            // Through reflector
+            // === REFLECTOR: Signal bounces back ===
+            // The reflector connects pairs of contacts, sending the signal back through the rotors
             char reflectorChar = ' ';
             var currentReflector = reflectorWirings[reflectorType];
             if (currentReflector.TryGetValue((char)(pos + 'A'), out reflectorChar))
@@ -492,19 +628,20 @@ namespace EnigmaMachine
                 pos = reflectorChar - 'A';
             }
 
-            // Left to right through the rotors (A -> B -> C)
+            // === RETURN PATH: Left to right through the rotors (A -> B -> C) ===
+            // Now we go backwards through the rotors, using inverse substitution
 
-            // Through rotor A (left)
+            // Through rotor A (left) - inverse direction
             shifted = (pos + offsetA) % 26;
-            int index = effectiveRotors[0].IndexOf((char)(shifted + 'A'));
+            int index = effectiveRotors[0].IndexOf((char)(shifted + 'A'));  // Find inverse mapping
             pos = (index - offsetA + 26) % 26;
 
-            // Through rotor B (middle)
+            // Through rotor B (middle) - inverse direction
             shifted = (pos + offsetB) % 26;
             index = effectiveRotors[1].IndexOf((char)(shifted + 'A'));
             pos = (index - offsetB + 26) % 26;
 
-            // Through rotor C (right)
+            // Through rotor C (right) - inverse direction
             shifted = (pos + offsetC) % 26;
             index = effectiveRotors[2].IndexOf((char)(shifted + 'A'));
             pos = (index - offsetC + 26) % 26;
@@ -512,7 +649,8 @@ namespace EnigmaMachine
             // Convert back to letter
             c = (char)(pos + 'A');
 
-            // Apply plugboard again
+            // Apply plugboard again (plugboard is symmetric)
+            // Same transformation as at the beginning
             if (plugboard.TryGetValue(c, out plugboardOutput))
             {
                 c = plugboardOutput;
@@ -556,8 +694,13 @@ namespace EnigmaMachine
         }
 
         // Get current state for display
-        public (string[] RotorTypes, char[] RingPositions, char[] RingSettings, string ReflectorType, Dictionary<char, char> Plugboard, string Plaintext, string Ciphertext) GetState()
+        public (string[] RotorTypes, char[] RingPositions, char[] RingSettings, string ReflectorType,
+                Dictionary<char, char> Plugboard, string Plaintext, string Ciphertext,
+                bool IsDefault, string InitialPositions) GetState()
         {
+            bool isDefault = ConfigurationsEqual(currentConfiguration, defaultConfiguration);
+            string initialPos = new string(initialConfiguration.RingPositions);
+
             return (
                 rotorTypes.ToArray(),
                 ringPositions.ToArray(),
@@ -565,8 +708,18 @@ namespace EnigmaMachine
                 reflectorType,
                 new Dictionary<char, char>(plugboard),
                 plaintext.ToString(),
-                ciphertext.ToString()
+                ciphertext.ToString(),
+                isDefault,
+                initialPos
             );
+        }
+
+        private bool ConfigurationsEqual(EnigmaConfiguration a, EnigmaConfiguration b)
+        {
+            return a.RotorTypes.SequenceEqual(b.RotorTypes) &&
+                   a.ReflectorType == b.ReflectorType &&
+                   a.RingSettings.SequenceEqual(b.RingSettings) &&
+                   a.PlugboardPairs == b.PlugboardPairs;
         }
 
         // Set or update rotors
@@ -574,46 +727,24 @@ namespace EnigmaMachine
         {
             rotorTypes = types.ToArray();
             ringPositions = positions.ToUpper().ToCharArray();
-
-            // Reset text
-            plaintext.Clear();
-            ciphertext.Clear();
+            UpdateCurrentConfiguration();
+            ClearText();
         }
 
         // Set or update ring settings
         public void SetRingSettings(string settings)
         {
             ringSettings = settings.ToUpper().ToCharArray();
-
-            // Reset text
-            plaintext.Clear();
-            ciphertext.Clear();
+            UpdateCurrentConfiguration();
+            ClearText();
         }
 
         // Set or update plugboard
         public void SetPlugboard(string pairs)
         {
-            plugboard.Clear();
-
-            // Parse plugboard settings
-            var connections = pairs.ToUpper().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (var pair in connections)
-            {
-                if (pair.Length == 2 &&
-                    char.IsLetter(pair[0]) &&
-                    char.IsLetter(pair[1]) &&
-                    !plugboard.ContainsKey(pair[0]) &&
-                    !plugboard.ContainsKey(pair[1]))
-                {
-                    plugboard[pair[0]] = pair[1];
-                    plugboard[pair[1]] = pair[0];
-                }
-            }
-
-            // Reset text
-            plaintext.Clear();
-            ciphertext.Clear();
+            SetupPlugboard(pairs);
+            UpdateCurrentConfiguration();
+            ClearText();
         }
 
         // Set or update reflector
@@ -622,26 +753,37 @@ namespace EnigmaMachine
             if (reflectorWirings.ContainsKey(type))
             {
                 reflectorType = type;
-
-                // Reset text
-                plaintext.Clear();
-                ciphertext.Clear();
+                UpdateCurrentConfiguration();
+                ClearText();
             }
         }
 
-        // Reset the machine
-        public void Reset()
+        // Clear only the text, preserve configuration
+        public void ClearText()
         {
-            rotorTypes = new[] { "I", "II", "III" };
-            reflectorType = "UKW-B";
-            ringSettings = new[] { 'A', 'A', 'A' };
-            ringPositions = new[] { 'A', 'A', 'A' };
-
-            plugboard.Clear();
-
             plaintext.Clear();
             ciphertext.Clear();
         }
+
+        // Reset to current default configuration
+        public void Reset()
+        {
+            ApplyConfiguration(defaultConfiguration);
+            ClearText();
+        }
+
+        // Reset to initial startup configuration
+        public void ResetToInitial()
+        {
+            ApplyConfiguration(initialConfiguration);
+            ClearText();
+        }
+
+        // Save current configuration as the new default
+        public void SaveCurrentAsDefault()
+        {
+            UpdateCurrentConfiguration();
+            defaultConfiguration = currentConfiguration.Clone();
+        }
     }
 }
-
