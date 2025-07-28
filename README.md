@@ -44,8 +44,6 @@ A C# console application that simulates the historical Enigma encryption machine
    - **Reflector:** UKW-B or UKW-C
 
 ## Example
-Commands:
-[ESC] Exit | [F1] Reset to Default | [F2] Set Rotors | ...
 Rotor Types: I II III
 Rotor Positions: I-[A] II-[A] III-[G]
 Ring Settings: I-[A] II-[A] III-[A]
