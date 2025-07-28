@@ -273,7 +273,7 @@ namespace EnigmaMachine
     /// </summary>
     class Enigma
     {
-        // Constants
+        // Constants,  I cant remeber what i used this for probably should be removed
         private const string ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
         // Rotor wirings (historical Enigma rotors I-V)
