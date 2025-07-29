@@ -106,8 +106,6 @@ namespace EnigmaMachine
             {
                 return text;
             }
-
-            // Use a StringBuilder for efficient string manipulation
             var formattedText = new System.Text.StringBuilder();
 
             for (int i = 0; i < text.Length; i++)
