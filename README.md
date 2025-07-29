@@ -51,8 +51,8 @@ Ring Settings: I-[A] II-[A] III-[A]
 Reflector: UKW-B  
 Plugboard Connections:  
 Configuration: Default | Initial Positions: AAA  
-Plaintext: ENIGMA  
-Encrypted: FQGAHW
+Plaintext: ENIGM A  
+Encrypted: FQGAH W
 ```
 
 ## Notes
