@@ -669,7 +669,7 @@ namespace EnigmaMachine
         }
 
         // Rotate rotors according to Enigma mechanics
-        // This implements the complex "double-stepping" mechanism of the historical Enigma
+        // This implements the "double-stepping" mechanism of the historical Enigma
         private void RotateRotors()
         {
             // Check for notch positions to implement double stepping
