@@ -100,6 +100,29 @@ namespace EnigmaMachine
             }
         }
 
+        static string FormatTextIntoGroups(string text, int groupSize = 5)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            // Use a StringBuilder for efficient string manipulation
+            var formattedText = new System.Text.StringBuilder();
+
+            for (int i = 0; i < text.Length; i++)
+            {
+                formattedText.Append(text[i]);
+
+                // Add a space after a group is complete, but not at the very end of the string
+                if ((i + 1) % groupSize == 0 && (i + 1) < text.Length)
+                {
+                    formattedText.Append(' ');
+                }
+            }
+
+            return formattedText.ToString();
+        }
         static void DrawInterface(Enigma enigma)
         {
             Console.Clear();
@@ -154,8 +177,10 @@ namespace EnigmaMachine
             Console.WriteLine($"Configuration: {(state.IsDefault ? "Default" : "Custom")} | Initial Positions: {state.InitialPositions}");
 
             // Text display areas
-            Console.WriteLine($"\nPlaintext: {state.Plaintext}");
-            Console.WriteLine($"Encrypted: {state.Ciphertext}");
+            Console.WriteLine($"\nPlaintext: {FormatTextIntoGroups(state.Plaintext)}");
+            Console.WriteLine($"Encrypted: {FormatTextIntoGroups(state.Ciphertext)}");
+
+
         }
 
         static void SetRotors(Enigma enigma)
