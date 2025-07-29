@@ -85,6 +85,11 @@ namespace EnigmaMachine
                         DrawInterface(enigma);
                         break;
 
+                    case ConsoleKey.F9:
+                        SetRotorPositionsOnly(enigma);
+                        DrawInterface(enigma);
+                        break;
+
                     default:
                         // Only process alphabetic characters
                         if (char.IsLetter(key.KeyChar))
@@ -135,7 +140,7 @@ namespace EnigmaMachine
             Console.WriteLine("Commands:");
             Console.WriteLine("[ESC] Exit | [F1] Reset to Default | [F2] Set Rotors | [F3] Set Plugboard");
             Console.WriteLine("[F4] Set Rings | [F5] Set Reflector | [F6] Save as Default | [F7] Reset to Initial");
-            Console.WriteLine("[F8] Clear Text | Type to encrypt\n");
+            Console.WriteLine("[F8] Clear Text | [F9] Set Positions | Type to encrypt\n");
 
             // Configuration display
             Console.Write("Rotor Types: ");
@@ -237,6 +242,40 @@ namespace EnigmaMachine
 
             // Apply new settings
             enigma.SetRotors(rotorTypes, new string(rotorPositions));
+        }
+
+        static void SetRotorPositionsOnly(Enigma enigma)
+        {
+            Console.Clear();
+            Console.WriteLine("Set Rotor Positions");
+            Console.WriteLine("------------------");
+
+            char[] rotorPositions = new char[3];
+            string[] positions = new string[3] { "I", "II", "III" };
+
+            for (int i = 0; i < 3; i++)
+            {
+                bool validInput = false;
+                while (!validInput)
+                {
+                    Console.Write($"Rotor {positions[i]} Position (A-Z): ");
+                    var input = Console.ReadKey().KeyChar;
+                    Console.WriteLine();
+
+                    if (char.IsLetter(input))
+                    {
+                        rotorPositions[i] = char.ToUpper(input);
+                        validInput = true;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Please enter a letter A-Z.");
+                    }
+                }
+            }
+
+            // Apply new settings using our new method
+            enigma.SetRotorPositions(new string(rotorPositions));
         }
 
         static bool ValidatePlugboardInput(string input, out string errorMessage)
@@ -846,6 +885,19 @@ namespace EnigmaMachine
             ringPositions = positions.ToUpper().ToCharArray();
             UpdateCurrentConfiguration();
             ClearText();
+        }
+
+        // update rotors position
+        public void SetRotorPositions(string positions)
+        {
+            // Basic validation to ensure the input length is correct, validation prevents crashes and maintains a valid machine state could be a good idea to add to other functions aswell
+            
+            if (positions != null && positions.Length == this.ringPositions.Length)
+            {
+                this.ringPositions = positions.ToUpper().ToCharArray();
+                UpdateCurrentConfiguration(); // Keep the current configuration object in sync
+                ClearText(); // Reset text as the starting point has changed
+            }
         }
 
         // Set or update ring settings
