@@ -37,36 +37,43 @@ namespace EnigmaMachine
 
                 switch (key.Key)
                 {
-                    case ConsoleKey.Escape:
-                        running = false;
+                    // --- Core Encryption ---
+                    default:
+                        if (char.IsLetter(key.KeyChar))
+                        {
+                            enigma.EncryptChar(key.KeyChar);
+                            DrawInterface(enigma);
+                        }
                         break;
 
-                    case ConsoleKey.F1:
-                        enigma.Reset();
-                        DrawInterface(enigma);
-                        break;
-
-                    case ConsoleKey.F2:
+                    // --- Machine Configuration ---
+                    case ConsoleKey.F1: // Set Rotors (Types & Positions)
                         SetRotors(enigma);
                         DrawInterface(enigma);
                         break;
 
-                    case ConsoleKey.F3:
-                        SetPlugboard(enigma);
+                    case ConsoleKey.F2: // Set Positions Only
+                        SetRotorPositionsOnly(enigma);
                         DrawInterface(enigma);
                         break;
 
-                    case ConsoleKey.F4:
+                    case ConsoleKey.F3: // Set Ring Settings
                         SetRingSettings(enigma);
                         DrawInterface(enigma);
                         break;
 
-                    case ConsoleKey.F5:
+                    case ConsoleKey.F4: // Set Plugboard
+                        SetPlugboard(enigma);
+                        DrawInterface(enigma);
+                        break;
+
+                    case ConsoleKey.F5: // Set Reflector
                         SetReflector(enigma);
                         DrawInterface(enigma);
                         break;
 
-                    case ConsoleKey.F6:
+                    // --- State Management ---
+                    case ConsoleKey.F6: // Save Current as Default
                         enigma.SaveCurrentAsDefault();
                         Console.Clear();
                         Console.WriteLine("Current configuration saved as default!");
@@ -75,31 +82,24 @@ namespace EnigmaMachine
                         DrawInterface(enigma);
                         break;
 
-                    case ConsoleKey.F7:
+                    case ConsoleKey.F7: // Reset to Custom Default
+                        enigma.Reset();
+                        DrawInterface(enigma);
+                        break;
+
+                    case ConsoleKey.F8: // Reset to Initial "Factory" Default
                         enigma.ResetToInitial();
                         DrawInterface(enigma);
                         break;
 
-                    case ConsoleKey.F8:
+                    // --- Utilities & Program Control ---
+                    case ConsoleKey.F9: // Clear Text
                         enigma.ClearText();
                         DrawInterface(enigma);
                         break;
 
-                    case ConsoleKey.F9:
-                        SetRotorPositionsOnly(enigma);
-                        DrawInterface(enigma);
-                        break;
-
-                    default:
-                        // Only process alphabetic characters
-                        if (char.IsLetter(key.KeyChar))
-                        {
-                            // Process through enigma
-                            var encryptedChar = enigma.EncryptChar(key.KeyChar);
-
-                            // Update the interface
-                            DrawInterface(enigma);
-                        }
+                    case ConsoleKey.Escape: // Exit
+                        running = false;
                         break;
                 }
             }
@@ -138,9 +138,14 @@ namespace EnigmaMachine
 
             // Commands
             Console.WriteLine("Commands:");
-            Console.WriteLine("[ESC] Exit | [F1] Reset to Default | [F2] Set Rotors | [F3] Set Plugboard");
-            Console.WriteLine("[F4] Set Rings | [F5] Set Reflector | [F6] Save as Default | [F7] Reset to Initial");
-            Console.WriteLine("[F8] Clear Text | [F9] Set Positions | Type to encrypt\n");
+            Console.WriteLine("  Machine Configuration (F1-F5)   | State Management (F6-F8)");
+            Console.WriteLine("  -----------------------------   | ----------------------------");
+            Console.WriteLine("  [F1] Set Rotors (Types & Pos)   | [F6] Save Current as Default");
+            Console.WriteLine("  [F2] Set Positions Only         | [F7] Reset to Custom Default");
+            Console.WriteLine("  [F3] Set Ring Settings          | [F8] Reset to Initial Default");
+            Console.WriteLine("  [F4] Set Plugboard              | ");
+            Console.WriteLine("  [F5] Set Reflector              | [F9] Clear Text (Utility)");
+            Console.WriteLine("\n[ESC] Exit | Type to encrypt\n");
 
             // Configuration display
             Console.Write("Rotor Types: ");
@@ -177,7 +182,7 @@ namespace EnigmaMachine
             Console.WriteLine(string.Join(" ", plugboardPairs));
 
             // Configuration status
-            Console.WriteLine($"Configuration: {(state.IsDefault ? "Default" : "Custom")} | Initial Positions: {state.InitialPositions}");
+            Console.WriteLine($"Configuration: {(state.IsDefault ? "Default" : "Custom")} | Starting Key: {state.StartingKey}");
 
             // Text display areas
             Console.WriteLine($"\nPlaintext: {FormatTextIntoGroups(state.Plaintext)}");
@@ -523,6 +528,8 @@ namespace EnigmaMachine
         private char[] ringPositions; // Current position of each rotor
         private Dictionary<char, char> plugboard; // Plugboard connections
 
+        private char[] messageKeyPositions; // Holds the starting key for the current message
+
         // For tracking input/output
         private StringBuilder plaintext;  // Accumulates original input text
         private StringBuilder ciphertext; // Accumulates encrypted output text
@@ -590,6 +597,7 @@ namespace EnigmaMachine
             reflectorType = config.ReflectorType;
             ringSettings = (char[])config.RingSettings.Clone();
             ringPositions = (char[])config.RingPositions.Clone();
+            messageKeyPositions = (char[])config.RingPositions.Clone();
 
             // Set up plugboard
             plugboard = new Dictionary<char, char>();
@@ -852,10 +860,10 @@ namespace EnigmaMachine
         // Get current state for display
         public (string[] RotorTypes, char[] RingPositions, char[] RingSettings, string ReflectorType,
                 Dictionary<char, char> Plugboard, string Plaintext, string Ciphertext,
-                bool IsDefault, string InitialPositions) GetState()
+                bool IsDefault, string StartingKey) GetState()
         {
             bool isDefault = ConfigurationsEqual(currentConfiguration, defaultConfiguration);
-            string initialPos = new string(initialConfiguration.RingPositions);
+            string startingKey = new string(messageKeyPositions);
 
             return (
                 rotorTypes.ToArray(),
@@ -866,7 +874,7 @@ namespace EnigmaMachine
                 plaintext.ToString(),
                 ciphertext.ToString(),
                 isDefault,
-                initialPos
+                startingKey
             );
         }
 
@@ -883,6 +891,7 @@ namespace EnigmaMachine
         {
             rotorTypes = types.ToArray();
             ringPositions = positions.ToUpper().ToCharArray();
+            messageKeyPositions = (char[])ringPositions.Clone();
             UpdateCurrentConfiguration();
             ClearText();
         }
@@ -895,6 +904,7 @@ namespace EnigmaMachine
             if (positions != null && positions.Length == this.ringPositions.Length)
             {
                 this.ringPositions = positions.ToUpper().ToCharArray();
+                messageKeyPositions = (char[])ringPositions.Clone();
                 UpdateCurrentConfiguration(); // Keep the current configuration object in sync
                 ClearText(); // Reset text as the starting point has changed
             }
