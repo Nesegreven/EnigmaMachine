@@ -489,7 +489,7 @@ namespace EnigmaMachine
     }
 
     /// <summary>
-    /// Enigma machine implementation with improved state management
+    /// Enigma machine implementation with state management
     /// </summary>
     class Enigma
     {
