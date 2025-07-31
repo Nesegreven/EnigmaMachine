@@ -9,15 +9,13 @@ A C# console application that simulates the historical Enigma encryption machine
 - **Historical Rotor/Reflector Support**  
   Rotors I–V, UKW-B and UKW-C reflectors.
 - **Ring Settings & Positions**  
-  Correct handling of ringstellung and rotor positions, including double-stepping.
+  Handling ringstellung and rotor positions, including double-stepping.
 - **Plugboard**  
   Support for custom plugboard (Steckerbrett) wiring pairs.
 - **Configuration Management**  
   Save/restore/reset configurations.
 - **Live Encryption**  
   See output as you type.
-- **Accurate Simulation**  
-  Carefully follows historical stepping and encryption logic.
 
 ## How to Use
 
