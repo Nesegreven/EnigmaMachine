@@ -45,13 +45,27 @@ A C# console application that simulates the historical Enigma encryption machine
 
 ## Example
 ```
-Rotor Types: I II III  
-Rotor Positions: I-[A] II-[A] III-[G]  
-Ring Settings: I-[A] II-[A] III-[A]  
-Reflector: UKW-B  
-Plugboard Connections:  
-Configuration: Default | Initial Positions: AAA  
-Plaintext: ENIGM A  
+Enigma Machine
+
+Commands:
+  Machine Configuration (F1-F5)   | State Management (F6-F8)
+  -----------------------------   | ----------------------------
+  [F1] Set Rotors (Types & Pos)   | [F6] Save Current as Default
+  [F2] Set Positions Only         | [F7] Reset to Custom Default
+  [F3] Set Ring Settings          | [F8] Reset to Initial Default
+  [F4] Set Plugboard              |
+  [F5] Set Reflector              | [F9] Clear Text (Utility)
+
+[ESC] Exit | Type to encrypt
+
+Rotor Types: I II III
+Rotor Positions: I-[A] II-[A] III-[G]
+Ring Settings: I-[A] II-[A] III-[A]
+Reflector: UKW-B
+Plugboard Connections:
+Configuration: Default | Starting Key: AAA
+
+Plaintext: ENIGM A
 Encrypted: FQGAH W
 ```
 
