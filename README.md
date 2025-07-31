@@ -69,9 +69,3 @@ Plaintext: ENIGM A
 Encrypted: FQGAH W
 ```
 
-## Notes
-
-- Double-stepping and ring setting behaviors are implemented as per the historical machines.
-- Plugboard swaps are symmetric (A–B means B–A).
-- All state and configuration changes are reflected live.
-
