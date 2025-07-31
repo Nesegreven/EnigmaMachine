@@ -54,7 +54,7 @@ Commands:
   [F2] Set Positions Only         | [F7] Reset to Custom Default
   [F3] Set Ring Settings          | [F8] Reset to Initial Default
   [F4] Set Plugboard              |
-  [F5] Set Reflector              | [F9] Clear Text (Utility)
+  [F5] Set Reflector              | [F9] Clear Text 
 
 [ESC] Exit | Type to encrypt
 
