@@ -24,18 +24,6 @@ A C# console application that simulates the historical Enigma encryption machine
 1. **Build and Run**  
    - Open in Visual Studio (or run `dotnet run` if using .NET CLI).
 
-2. **Controls:**  
-   - `ESC` – Exit program  
-   - `F1` – Reset to default configuration  
-   - `F2` – Set rotors and positions  
-   - `F3` – Set plugboard  
-   - `F4` – Set ring settings  
-   - `F5` – Set reflector  
-   - `F6` – Save current as default  
-   - `F7` – Reset to initial configuration  
-   - `F8` – Clear input/output text  
-   - **Type letters** – Encrypt letter by letter
-
 3. **Configuration Options:**  
    - **Rotors:** Choose from I, II, III, IV, V  
    - **Rotor Positions:** A–Z for each rotor  
