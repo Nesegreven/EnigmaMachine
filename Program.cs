@@ -144,7 +144,7 @@ namespace EnigmaMachine
             Console.WriteLine("  [F2] Set Positions Only         | [F7] Reset to Custom Default");
             Console.WriteLine("  [F3] Set Ring Settings          | [F8] Reset to Initial Default");
             Console.WriteLine("  [F4] Set Plugboard              | ");
-            Console.WriteLine("  [F5] Set Reflector              | [F9] Clear Text (Utility)");
+            Console.WriteLine("  [F5] Set Reflector              | [F9] Clear Text ");
             Console.WriteLine("\n[ESC] Exit | Type to encrypt\n");
 
             // Configuration display
